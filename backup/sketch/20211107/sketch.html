@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="">
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<title>2021-11-07</title>
+		<link rel="stylesheet" type="text/css" href="../../lib/skeleton.css">
+		<script src="../../lib/p5-1.4.0.min.js"></script>
+		<script src="../../lib/tweakpane-3.0.5.min.js"></script>
+		<!-- <script src="../../lib/tone-14.8.26.js"></script> -->
+		<script src="sketch.js" type="module"></script>
+		<script>
+			const setup_lockScroll = () => {
+				window.addEventListener("touchstart", scroll_control, { passive: false });
+				window.addEventListener("touchmove", scroll_control, { passive: false });
+			}
+			const scroll_control = event => event.preventDefault();
+		</script>
+	</head>
+	<body>
+		<div class="row">
+			<div class="two-thirds column" id="sketch"></div>
+			<div class="one-third column" id="pane"></div>
+		</div>
+		<div class="row">
+			<a href="../../index.html"><h6>back to top</h6></a>
+		</div>
+	</body>
+</html>

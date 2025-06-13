@@ -60,11 +60,15 @@ const sketch = (s) => {
 		}
 		routine();
 		function drawTracks() {
-			dt.tracks.forEach((track) => track.forEach((point) => {
-				if (point === 0) return ;
-				s.fill(0);
-				s.circle(point.x, point.y, size * 0.01);
-			}))
+			dt.tracks.forEach((track, trackIndex) => {
+				s.beginShape();
+				s.stroke(50 * (trackIndex +1));
+				track.forEach((point) => {
+					if (point === 0) return ;
+					s.vertex(point.x, point.y);
+				});
+				s.endShape();
+				});
 		}
 		drawTracks();
 		function playSnd() {

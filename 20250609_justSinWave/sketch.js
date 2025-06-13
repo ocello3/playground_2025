@@ -15,7 +15,7 @@ const sketch = (s) => {
 		frameRate: 0,
 	};
 	s.setup = () => {
-		s.createCanvas().parent("canvas");
+		u.initRoutine(s);
 		size = u.getSize(s);
 		snd = (()=> {
 			const snd = {};
@@ -29,8 +29,6 @@ const sketch = (s) => {
 		}
 		const f = u.createPane(s, p, activate);
 		const f1 = f.addFolder({ title: "sketch" });
-		s.noLoop();
-		s.outputVolume(0);
 	};
 	s.draw = () => {
 		function getDt(_dt) {
@@ -56,7 +54,7 @@ const sketch = (s) => {
 			s.background(255);
 			s.noStroke();
 			u.drawFrame(s, size);
-			u.debug(s, p, dt.tracks[0], 3); // 4-length, 5-startPos, 6-refreshInterval
+			u.debug(s, p, dt.tracks[0], 3); // 4-length, 5-start, 6-refresh
 			p.frameRate = s.isLooping() ? s.frameRate() : 0;
 			if (p.isInit) { p.isInit = false };
 		}

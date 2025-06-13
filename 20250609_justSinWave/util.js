@@ -1,5 +1,16 @@
 import { Pane } from "../lib/tweakpane-4.0.3.min.js";
 
+// routine for setup func
+export const initRoutine = (s) => {
+	s.createCanvas().parent("canvas");
+	s.noLoop();
+	s.outputVolume(0);
+	// prevent pinch in/out
+	document.addEventListener('gesturestart', (e) => e.preventDefault());
+	document.addEventListener('gesturechange', (e) => e.preventDefault());
+	document.addEventListener('gestureend', (e) => e.preventDefault());
+}
+
 // create pane by tweakpane and return folder as 'f'
 export const createPane = (s, p, activate=undeined) => {
 	const pane = new Pane({

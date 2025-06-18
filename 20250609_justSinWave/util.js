@@ -12,7 +12,7 @@ export const initRoutine = (s) => {
 }
 
 // create pane by tweakpane and return folder as 'f'
-export const createPane = (s, p, activate=undeined) => {
+export const createPane = (s, p, activate=undefined) => {
 	const pane = new Pane({
 		container: document.getElementById("pane"),
 	});

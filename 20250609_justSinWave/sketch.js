@@ -6,6 +6,9 @@ import * as u from "./util.js";
 音が出るか確認
 末尾配列のx座標を使ってない
 手が離れた、かつ、配列から消える点で音を出して、先頭の点はタッチ位置を取得して連続的に音を出す
+結んでいる線を濃くしてそれでも音を鳴らしたい
+先頭の座標でシンプルに音を鳴らす
+背景のsinの音量を揺らす。背景の色の揺らぎを合わせる
 */
 
 const sketch = (s) => {
@@ -44,6 +47,7 @@ const sketch = (s) => {
 		// s.frameRate(10);
 		function activate() {
 			snd.oscs.head.forEach(osc => { osc.start() });
+			snd.oscs.tail.forEach(osc => { osc.start() });
 			snd.osc.start();
 		}
 		const f = u.createPane(s, p, activate);
@@ -67,10 +71,10 @@ const sketch = (s) => {
 				}
 				const getFreq = (index) => (track.at(index) === 0) ? 0 : s.map(track.at(index).y, 0, size, 50, 1000);
 				const snds = {};
-				snds.head = {
-					pan: getPan(0),
-					vol: getVol(0),
-					freq: getFreq(0),
+				snds.tail = {
+					pan: getPan(-1),
+					vol: getVol(-1),
+					freq: getFreq(-1),
 				};
 				return snds;
 			});
@@ -112,17 +116,12 @@ const sketch = (s) => {
 		}
 		drawTracks();
 		function playSnd() {
-			snd.oscs.head.forEach((osc,index) => { // forEach is not working?
-				osc.pan(dt.snds[index].head.pan);
-				osc.amp(dt.snds[index].head.vol, 0.1);
-				osc.freq(dt.snds[index].head.freq);
-			});
 			snd.oscs.tail.forEach((osc,index) => { // forEach is not working?
-				osc.pan(dt.snds[index].head.pan);
-				osc.amp(dt.snds[index].head.vol, 0.1);
-				osc.freq(dt.snds[index].head.freq);
+				osc.pan(dt.snds[index].tail.pan);
+				osc.amp(dt.snds[index].tail.vol, 0.1);
+				osc.freq(dt.snds[index].tail.freq);
 			})
-			snd.osc.amp(0.8);
+			// snd.osc.amp(0.8);
 		}
 		playSnd();
 	};

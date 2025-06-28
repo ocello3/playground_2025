@@ -63,20 +63,32 @@ const sketch = (s) => {
 				(s.touches.length > index && s.frameCount % 3 === 0) ?
 					[s.touches[index], ..._track.slice(0, -1)] :
 					[0, ..._track.slice(0, -1)]);
-			dt.snds = dt.tracks.map((track) => {
-				const getPan = (index) => (track.at(index) === 0) ? 0 : s.map(track.at(index).x, 0, size, -1, 1)
-				const getVol = (index) => {
-					const dist_center = (track.at(index) === 0) ? 0 : p5.Vector.dist(s.createVector(size * 0.5, size * 0.5), s.createVector(track.at(index).x, track.at(index).y));
-					return (track.at(index) === 0) ? 0 : s.map(dist_center, 0, size * 0.5, 0, 0.8);
+			dt.snds = dt.tracks.map((track, i) => {
+				const getPan = (index, type) => {
+					if (p.isInit) return 0;
+					if (track.at(index) === 0) return _dt.snds[i][type].pan;
+					return s.map(track.at(index).x, 0, size, -1, 1);
 				}
-				const getFreq = (index) => (track.at(index) === 0) ? 0 : s.map(track.at(index).y, 0, size, 50, 1000);
-				const snds = {};
-				snds.tail = {
-					pan: getPan(-1),
-					vol: getVol(-1),
-					freq: getFreq(-1),
+				const getVol = (index, type) => {
+					if (p.isInit) return 0;
+					if (track.at(index) === 0) return _dt.snds[i][type].vol * 0.3; // reduc rate
+					const center = s.createVector(size * 0.5, size * 0.5);
+					const pos = s.createVector(track.at(index).x, track.at(index).y);
+					const dist = p5.Vector.dist(center, pos);
+					return s.map(dist, 0, size * 0.5, 0, 0.8);
+				}
+				const getFreq = (index, type) => {
+					if (p.isInit) return 0;
+					if (track.at(index) === 0) return _dt.snds[i][type].freq;
+					return s.map(track.at(index).y, 0, size, 50, 1000);
+				}
+				const snd = {};
+				snd.tail = {
+					pan: getPan(-1, "tail"),
+					vol: getVol(-1, "tail"),
+					freq: getFreq(-1, "tail"),
 				};
-				return snds;
+				return snd;
 			});
 			return dt;
 		}
@@ -85,7 +97,7 @@ const sketch = (s) => {
 			s.background(255);
 			s.noStroke();
 			u.drawFrame(s, size);
-			u.debug(s, p, dt.snds[0].head, 3); // 4-length, 5-start, 6-refresh
+			u.debug(s, p, dt.snds, 3); // 4-length, 5-start, 6-refresh
 			p.frameRate = s.isLooping() ? s.frameRate() : 0;
 		}
 		routine();
@@ -121,7 +133,7 @@ const sketch = (s) => {
 				osc.amp(dt.snds[index].tail.vol, 0.1);
 				osc.freq(dt.snds[index].tail.freq);
 			})
-			// snd.osc.amp(0.8);
+			snd.osc.amp(0.8);
 		}
 		playSnd();
 	};

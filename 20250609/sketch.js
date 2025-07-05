@@ -62,7 +62,6 @@ const sketch = (s) => {
 			dt.alpha = (() => {
 				const vol = snd.mod.getAmp();
 				return s.map(vol, 0, 1, 50, 255);
-				// これをalphaに変換する処理から再開する
 			})();
 				dt.snds = dt.tracks.map((track, i) => {
 				const getPan = (index, type) => {

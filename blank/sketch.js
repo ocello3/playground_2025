@@ -36,7 +36,7 @@ const sketch = (s) => {
 		}
 		dt = getDt(dt);
 		function routine() {
-			s.background(255, dt.alpha);
+			s.background(255);
 			s.noStroke();
 			u.drawFrame(s, size);
 			u.debug(s, p, dt); // 4-length, 5-start, 6-refresh

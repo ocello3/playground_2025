@@ -26,6 +26,11 @@ const sketch = (s) => {
 			osc_amp: 0.4,
 			mod_amp: 0.3,
 			mod_freq: 1,
+			lis_a: 3,
+			lis_b: 2,
+			lis_delta: 0.5,
+			lis_scaleX: 0.5,
+			lis_scaleY: 0.5,
 		};
 		snd = (() => {
 			const snd = {};
@@ -77,10 +82,22 @@ const sketch = (s) => {
 	s.draw = () => {
 		function getDt(_dt) {
 			dt = {};
+			dt.times = p.isInit ?
+				[...Array(p.fingers)].map(() => 0) :
+				_dt.times.map((time, index) => time + 0.005 + 0.001 * index);
+			dt.heads = dt.times.map((t) => {
+				/* Lissajous curve
+				x(t) = A * sin(a * t + δ)
+				y(t) = B * sin(b * t)
+				*/
+				const x = size * p.lis_scaleX * s.sin(p.lis_a * t * p.lis_delta * s.PI);
+				const y = size * p.lis_scaleY *  s.sin(p.lis_b * t);
+				return s.createVector(size * 0.5 + x, size * 0.5 + y);
+			});
 			const _tracks = p.isInit ? [...Array(p.fingers)].map(() => Array(50).fill(0)) :
 				_dt.tracks;
 			dt.tracks = _tracks.map((_track, index) =>
-				(s.touches.length > index && s.frameCount % 3 === 0) ? [s.touches[index], ..._track.slice(0, -1)] : [0, ..._track.slice(0, -1)]);
+				(s.frameCount % 3 === 0) ? [dt.heads[index], ..._track.slice(0, -1)] : [0, ..._track.slice(0, -1)]);
 			dt.alpha = (() => {
 				const vol = snd.mod.getAmp();
 				return s.map(vol, 0, 1, 50, 255);
@@ -136,7 +153,7 @@ const sketch = (s) => {
 			s.background(255, dt.alpha);
 			s.noStroke();
 			u.drawFrame(s, size);
-			u.debug(s, p, dt.snds, 3); // 4-length, 5-start, 6-refresh
+			u.debug(s, p, dt.heads, 3); // 4-length, 5-start, 6-refresh
 			p.frameRate = s.isLooping() ? s.frameRate() : 0;
 		}
 		routine();

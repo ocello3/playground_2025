@@ -1,10 +1,12 @@
 import "../lib/p5.min.js";
 import "../lib/p5.sound.min.js";
 import * as u from "./util.js";
+import { getParams } from "./params.js";
 
 /*
 todo:
-- タッチの座標を自動化する。文字の外枠とか
+- リサージュ曲線の固定したパラメータ（time含む）をtweakpaneに出す
+- 音がずっとなっていてうるさいので、たまに音が鳴る程度に調整する
 */
 
 const sketch = (s) => {
@@ -12,26 +14,7 @@ const sketch = (s) => {
 	s.setup = () => {
 		u.initRoutine(s);
 		size = u.getSize(s);
-		p = {
-			play: false,
-			isInit: true,
-			vol: 0,
-			frameRate: 0,
-			fingers: 3,
-			colors: [
-				[123, 108, 103],
-				[213, 85, 33],
-				[138, 37, 27]
-			],
-			osc_amp: 0.4,
-			mod_amp: 0.3,
-			mod_freq: 1,
-			lis_a: 3,
-			lis_b: 2,
-			lis_delta: 0.5,
-			lis_scaleX: 0.5,
-			lis_scaleY: 0.5,
-		};
+		p = getParams();
 		snd = (() => {
 			const snd = {};
 			snd.oscs = {
@@ -51,7 +34,8 @@ const sketch = (s) => {
 			snd.mod.amp(0);
 			snd.mod.freq(1);
 			snd.osc = new p5.Oscillator('sine');
-			snd.osc.amp(snd.mod.scale(-1, 1, 0, p.osc_amp));
+			// snd.osc.amp(snd.mod.scale(-1, 1, 0, p.osc_amp));
+			snd.osc.amp(0); // remove to play
 			snd.osc.freq(440);
 			return snd;
 		})();
@@ -82,26 +66,42 @@ const sketch = (s) => {
 	s.draw = () => {
 		function getDt(_dt) {
 			dt = {};
-			dt.times = p.isInit ?
-				[...Array(p.fingers)].map(() => 0) :
-				_dt.times.map((time, index) => time + 0.005 + 0.001 * index);
-			dt.heads = dt.times.map((t) => {
+			dt.times = p.isInit ? [...Array(p.fingers)].map(() => 0) :
+				_dt.times.map((time, index) => time + p.time_vel + p.time_gap * index);
+			dt.heads = dt.times.map((t, i) => {
 				/* Lissajous curve
 				x(t) = A * sin(a * t + δ)
 				y(t) = B * sin(b * t)
 				*/
-				const x = size * p.lis_scaleX * s.sin(p.lis_a * t * p.lis_delta * s.PI);
-				const y = size * p.lis_scaleY *  s.sin(p.lis_b * t);
-				return s.createVector(size * 0.5 + x, size * 0.5 + y);
+				const center = s.createVector(size * p.center_x[i], size * p.center_y[i]);
+				const frame = s.createVector(size * p.frame_x[i], size * p.frame_y[i]);
+				const rate = (() => {
+					const x = p.lis_scaleX * s.sin(p.lis_a * t * p.lis_delta * s.PI);
+					const y = p.lis_scaleY * s.sin(p.lis_b * t);
+					return s.createVector(x, y);
+				})();
+				const diff = p5.Vector.mult(frame, rate);
+				return p5.Vector.add(center, diff);
 			});
-			const _tracks = p.isInit ? [...Array(p.fingers)].map(() => Array(50).fill(0)) :
+			dt.proximities = dt.heads.map((head, i, heads) => {
+				const indexes = (() => {
+					if (i === 0) return [1, 2];
+					if (i === 1) return [0, 2];
+					if (i === 2) return [0, 1];
+				})();
+				const d1 = p5.Vector.dist(head, heads[indexes[0]]);
+				const d2 = p5.Vector.dist(head, heads[indexes[1]]);
+				const dist = d1 < d2 ? d1 : d2;
+				const thres = size * p.dist_thres;
+				if (dist > thres) return 0;
+				return s.map(dist, 0, thres, 1, 0);
+			});
+			const _tracks = p.isInit ? [...Array(p.fingers)].map(() => Array(p.dots).fill(0)) :
 				_dt.tracks;
 			dt.tracks = _tracks.map((_track, index) =>
-				(s.frameCount % 3 === 0) ? [dt.heads[index], ..._track.slice(0, -1)] : [0, ..._track.slice(0, -1)]);
-			dt.alpha = (() => {
-				const vol = snd.mod.getAmp();
-				return s.map(vol, 0, 1, 50, 255);
-			})();
+				(s.frameCount % (1) === 0) ? [dt.heads[index], ..._track.slice(0, -1)] : [0, ..._track.slice(0, -1)]);
+			dt.alphas = dt.proximities.map(proximity =>
+				s.map(proximity, 0, 1, 0, 255));
 			dt.snds = dt.tracks.map((track, i) => {
 				const getPan = (index, type) => {
 					if (p.isInit) return 0;
@@ -110,11 +110,14 @@ const sketch = (s) => {
 				}
 				const getVol = (index, type) => {
 					if (p.isInit) return 0;
-					if (track.at(index) === 0) return _dt.snds[i][type].vol * 0.3; // reduc rate
+					// calc by the dist with other heads for max vol
+					const max = dt.proximities[i] * 0.5;
+					// calc by the position for base vol
+					// if (track.at(index) === 0) return _dt.snds[i][type].vol * 0.3; // reduc rate
 					const center = s.createVector(size * 0.5, size * 0.5);
 					const pos = s.createVector(track.at(index).x, track.at(index).y);
 					const dist = p5.Vector.dist(center, pos);
-					return s.map(dist, 0, size * 0.5, 0, 0.8);
+					return s.map(dist, 0, size, 0, max);
 				}
 				const getFreq = (index, type) => {
 					if (p.isInit) return 0;
@@ -153,7 +156,7 @@ const sketch = (s) => {
 			s.background(255, dt.alpha);
 			s.noStroke();
 			u.drawFrame(s, size);
-			u.debug(s, p, dt.heads, 3); // 4-length, 5-start, 6-refresh
+			u.debug(s, p, dt.snds, 3); // 4-length, 5-start, 6-refresh
 			p.frameRate = s.isLooping() ? s.frameRate() : 0;
 		}
 		routine();
@@ -161,19 +164,23 @@ const sketch = (s) => {
 		function drawTracks() {
 			// track line
 			dt.tracks.forEach((track, trackIndex) => {
-				s.push();
-				s.beginShape();
-				s.noStroke();
 				const c = p.colors[trackIndex];
-				s.fill(c[0], c[1], c[2], dt.alpha);
+				const a = dt.alphas[trackIndex];
+				const a_stroke = a === 0 ? 255 : a;
+				s.push();
+				s.strokeWeight(size * 0.0001)
+				s.stroke(c[0], c[1], c[2], a_stroke);
+				s.fill(c[0], c[1], c[2], a);
+				s.beginShape();
 				track.forEach((point) => {
 					if (point === 0) return;
-					s.vertex(point.x, point.y);
+					s.curveVertex(point.x, point.y);
 				});
 				s.endShape();
 				s.pop();
 			});
 			// tie head and tail
+			/*
 			s.push();
 			s.beginShape();
 			s.fill(50, 150);
@@ -183,23 +190,26 @@ const sketch = (s) => {
 			});
 			s.endShape(s.CLOSE);
 			s.pop();
+			*/
 		}
 		drawTracks();
 
 		function playSnd() {
+			/*
 			snd.mod.amp(dt.mod.vol);
 			snd.mod.freq(dt.mod.freq);
+			*/
 			snd.oscs.tail.forEach((osc, index) => {
 				osc.pan(dt.snds[index].tail.pan);
-				osc.amp(dt.snds[index].tail.vol, 0.1);
+				osc.amp(dt.snds[index].tail.vol, 0.01);
 				osc.freq(dt.snds[index].tail.freq);
 			})
 			snd.oscs.head.forEach((osc, index) => {
 				osc.pan(dt.snds[index].head.pan);
-				osc.amp(dt.snds[index].head.vol, 0.1);
+				osc.amp(dt.snds[index].head.vol, 0.01);
 				osc.freq(dt.snds[index].head.freq);
 			})
-			snd.osc.amp(0.8);
+			// snd.osc.amp(0.2);
 		}
 		playSnd();
 	};

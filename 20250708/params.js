@@ -7,9 +7,9 @@ export const getParams = () => {
 		// sketch
 		fingers: 3,
 		colors: [
-			[123, 108, 103],
-			[213, 85, 33],
-			[138, 37, 27]
+			[0, 0, 0],
+			[101, 104, 237],
+			[6, 7, 191]
 		],
 		dots: 30, 
 		time_vel: 0.01,
@@ -25,9 +25,8 @@ export const getParams = () => {
 		lis_scaleY: 0.5,
 		// sound
 		dist_thres: 0.25,
-		osc_amp: 0.4,
-		mod_amp: 0.3,
-		mod_freq: 1,
+		amp_max: 0.5,
+		bases: [800, 1400, 2000],
 	};
 	return p;
 }

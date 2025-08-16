@@ -6,7 +6,6 @@ import { getParams } from "./params.js";
 /*
 todo:
 - リサージュ曲線の固定したパラメータ（time含む）をtweakpaneに出す
-- 音がずっとなっていてうるさいので、たまに音が鳴る程度に調整する
 */
 
 const sketch = (s) => {
@@ -29,38 +28,27 @@ const sketch = (s) => {
 					return osc;
 				}),
 			};
-			snd.mod = new p5.Oscillator('sine');
-			snd.mod.disconnect();
-			snd.mod.amp(0);
-			snd.mod.freq(1);
-			snd.osc = new p5.Oscillator('sine');
-			// snd.osc.amp(snd.mod.scale(-1, 1, 0, p.osc_amp));
-			snd.osc.amp(0); // remove to play
-			snd.osc.freq(440);
 			return snd;
 		})();
-		// console.log(snd.oscs.head[0]);
 		// s.frameRate(10);
 		function activate() {
 			snd.oscs.head.forEach(osc => { osc.start() });
 			snd.oscs.tail.forEach(osc => { osc.start() });
-			snd.mod.start();
-			snd.osc.start();
 		}
 		const f = u.createPane(s, p, activate);
 		const f1 = f.addFolder({ title: "sketch" });
 		const f2 = f.addFolder({ title: "sound" });
-		f2.addBinding(p, 'mod_amp', {
-			min: 0,
-			max: 1,
+		f1.addBinding(p, 'lis_a', {
+			min: 1,
+			max: 10,
 		});
-		f2.addBinding(p, 'mod_freq', {
+		f1.addBinding(p, 'lis_b', {
+			min: 1,
+			max: 10,
+		});
+		f1.addBinding(p, 'lis_delta', {
 			min: 0.1,
-			max: 0.8,
-		});
-		f2.addBinding(p, 'osc_amp', {
-			min: 0,
-			max: 1,
+			max: 1.0,
 		});
 	};
 	s.draw = () => {
@@ -98,64 +86,59 @@ const sketch = (s) => {
 			});
 			const _tracks = p.isInit ? [...Array(p.fingers)].map(() => Array(p.dots).fill(0)) :
 				_dt.tracks;
-			dt.tracks = _tracks.map((_track, index) =>
-				(s.frameCount % (1) === 0) ? [dt.heads[index], ..._track.slice(0, -1)] : [0, ..._track.slice(0, -1)]);
+			dt.tracks = _tracks.map((_track, index) => [dt.heads[index], ..._track.slice(0, -1)]);
 			dt.alphas = dt.proximities.map(proximity =>
 				s.map(proximity, 0, 1, 0, 255));
-			dt.snds = dt.tracks.map((track, i) => {
-				const getPan = (index, type) => {
+			dt.snds = dt.tracks.map((track, t_i) => {
+				const getPan = (p_i, type) => {
 					if (p.isInit) return 0;
-					if (track.at(index) === 0) return _dt.snds[i][type].pan;
-					return s.map(track.at(index).x, 0, size, -1, 1);
-				}
-				const getVol = (index, type) => {
+					const point = track.at(p_i);
+					if (!point || point === 0) {
+						return _dt?.snds?.[t_i]?.[type]?.pan ?? 0;
+					}
+					return s.map(point.x, 0, size, -1, 1);
+				};
+				const getVol = (p_i, type) => {
 					if (p.isInit) return 0;
-					// calc by the dist with other heads for max vol
-					const max = dt.proximities[i] * 0.5;
-					// calc by the position for base vol
-					// if (track.at(index) === 0) return _dt.snds[i][type].vol * 0.3; // reduc rate
+					const point = track.at(p_i);
+					if (!point || point === 0) {
+						return _dt?.snds?.[t_i]?.[type]?.vol ?? 0;
+					}
+					const max = dt.proximities[t_i] * p.amp_max;
 					const center = s.createVector(size * 0.5, size * 0.5);
-					const pos = s.createVector(track.at(index).x, track.at(index).y);
-					const dist = p5.Vector.dist(center, pos);
+					const dist = p5.Vector.dist(center, point);
 					return s.map(dist, 0, size, 0, max);
-				}
-				const getFreq = (index, type) => {
+				};
+				const getFreq = (p_i, type) => {
 					if (p.isInit) return 0;
-					if (track.at(index) === 0) return _dt.snds[i][type].freq;
-					return s.map(track.at(index).y, 0, size, 50, 1000);
-				}
-				const snd = {};
-				snd.head = {
-					pan: getPan(0, "head"),
-					vol: getVol(0, "head"),
-					freq: getFreq(0, "head"),
+					const point = track.at(p_i);
+					if (!point || point === 0) {
+						return _dt?.snds?.[t_i]?.[type]?.freq ?? 0;
+					}
+					const rate = s.map(point.y, 0, size, 0.01, 1);
+					return p.bases[t_i] * rate;
 				};
-				snd.tail = {
-					pan: getPan(-1, "tail"),
-					vol: getVol(-1, "tail"),
-					freq: getFreq(-1, "tail"),
-				};
-				return snd;
-			});
-			dt.mod = (() => {
-				// background oscillator snd
-				const heads = dt.tracks.filter(track => track[0] !== 0);
-				const num = heads.length;
-				if (p.isInit === true) return { freq: 1, vol: 0 };
-				if (num === 0) return _dt.mod;
 				return {
-					freq: s.map(dt.tracks[0][0].x, 0, size, 50, 1500),
-					vol: s.map(dt.tracks[0][0].y, 0, size, 0.1, 0.6),
-				}
-			})();
+					head: {
+						pan: getPan(0, "head"),
+						vol: getVol(0, "head"),
+						freq: getFreq(0, "head"),
+					},
+					tail: {
+						pan: getPan(-1, "tail"),
+						vol: getVol(-1, "tail"),
+						freq: getFreq(-1, "tail"),
+					},
+				};
+			});
 			return dt;
 		}
 		dt = getDt(dt);
 
 		function routine() {
-			s.background(255, dt.alpha);
+			s.background(242, 242, 242);
 			s.noStroke();
-			u.drawFrame(s, size);
+			// u.drawFrame(s, size);
 			u.debug(s, p, dt.snds, 3); // 4-length, 5-start, 6-refresh
 			p.frameRate = s.isLooping() ? s.frameRate() : 0;
 		}
@@ -179,26 +162,10 @@ const sketch = (s) => {
 				s.endShape();
 				s.pop();
 			});
-			// tie head and tail
-			/*
-			s.push();
-			s.beginShape();
-			s.fill(50, 150);
-			dt.tracks.forEach((track) => {
-				if (track[0] != 0) s.vertex(track.at(-1).x, track[0].y);
-				if (track.at(-1) != 0) s.vertex(track.at(-1).x, track.at(-1).y);
-			});
-			s.endShape(s.CLOSE);
-			s.pop();
-			*/
 		}
 		drawTracks();
 
 		function playSnd() {
-			/*
-			snd.mod.amp(dt.mod.vol);
-			snd.mod.freq(dt.mod.freq);
-			*/
 			snd.oscs.tail.forEach((osc, index) => {
 				osc.pan(dt.snds[index].tail.pan);
 				osc.amp(dt.snds[index].tail.vol, 0.01);
@@ -209,7 +176,6 @@ const sketch = (s) => {
 				osc.amp(dt.snds[index].head.vol, 0.01);
 				osc.freq(dt.snds[index].head.freq);
 			})
-			// snd.osc.amp(0.2);
 		}
 		playSnd();
 	};

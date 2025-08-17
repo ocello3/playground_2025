@@ -3,11 +3,6 @@ import "../lib/p5.sound.min.js";
 import * as u from "./util.js";
 import { getParams } from "./params.js";
 
-/*
-todo:
-- リサージュ曲線の固定したパラメータ（time含む）をtweakpaneに出す
-*/
-
 const sketch = (s) => {
 	let p, size, dt, snd;
 	s.setup = () => {
@@ -17,12 +12,12 @@ const sketch = (s) => {
 		snd = (() => {
 			const snd = {};
 			snd.oscs = {
-				head: [...Array(p.fingers)].map(() => {
+				head: [...Array(3)].map(() => {
 					const osc = new p5.Oscillator('sine');
 					osc.amp(0);
 					return osc;
 				}),
-				tail: [...Array(p.fingers)].map(() => {
+				tail: [...Array(3)].map(() => {
 					const osc = new p5.Oscillator('square');
 					osc.amp(0);
 					return osc;
@@ -50,11 +45,15 @@ const sketch = (s) => {
 			min: 0.1,
 			max: 1.0,
 		});
+		f1.addBinding(p, 'dist_thres', {
+			min: 0.01,
+			max: 0.5,
+		});
 	};
 	s.draw = () => {
 		function getDt(_dt) {
 			dt = {};
-			dt.times = p.isInit ? [...Array(p.fingers)].map(() => 0) :
+			dt.times = p.isInit ? [...Array(3)].map(() => 0) :
 				_dt.times.map((time, index) => time + p.time_vel + p.time_gap * index);
 			dt.heads = dt.times.map((t, i) => {
 				/* Lissajous curve
@@ -84,7 +83,7 @@ const sketch = (s) => {
 				if (dist > thres) return 0;
 				return s.map(dist, 0, thres, 1, 0);
 			});
-			const _tracks = p.isInit ? [...Array(p.fingers)].map(() => Array(p.dots).fill(0)) :
+			const _tracks = p.isInit ? [...Array(3)].map(() => Array(p.dots).fill(0)) :
 				_dt.tracks;
 			dt.tracks = _tracks.map((_track, index) => [dt.heads[index], ..._track.slice(0, -1)]);
 			dt.alphas = dt.proximities.map(proximity =>

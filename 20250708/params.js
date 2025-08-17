@@ -5,7 +5,6 @@ export const getParams = () => {
 		vol: 0,
 		frameRate: 0,
 		// sketch
-		fingers: 3,
 		colors: [
 			[0, 0, 0],
 			[101, 104, 237],

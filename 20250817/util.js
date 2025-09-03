@@ -195,7 +195,7 @@ function safeStringify(obj, maxLen = 200) {
 	}
 }
 
-export function deepSafe(obj, debugMode) {
+function deepSafe(obj, debugMode) {
 	if (!debugMode || typeof obj !== "object" || obj === null) return obj;
 
 	const handler = {

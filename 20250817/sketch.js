@@ -23,7 +23,37 @@ const sketch = (s) => {
 	s.draw = () => {
 		function getDt(_dt, p, s) {
 			let dt = { ..._dt };
-			dt.pos = p.isInit ? s.createVector(0, 0) : s.createVector(s.mouseX, s.mouseY);
+			dt.analysis = (() => {
+				// presude code before analyze sound
+				let analysis = {};
+				analysis.volume = s.noise(0.005 * s.frameCount);
+				analysis.isTrigger = analysis > p.volThres;
+				return analysis;
+			});
+			dt.charIndex = (() => {
+				if (p.isInit) return 0;
+				if (!dt.analysis.isTrigger) return _dt.charIndex;
+				if (_dt.charIndex  < p.sentense.length) return 0;
+				return _dt.charIndex + 1;
+			})();
+			dt.chars = p.isInit || dt.charIndex == p.sentense.length - 1 ?
+				[...Array(p.sentense.length)].map(() => 0) :
+				_dt.chars.map((_char, index) => {
+					if (index < dt.charIndex) return _char;
+					let char = { ..._char };
+					char.isInit = _char == 0 ? true : false;
+					char.type = char.isInit ? p.sentense.charAt(index) : _char.type;
+					char.fontSize = char.isInit ? p.fontSizeRate * size : _char.fontSize;
+					if (char.isInit) s.textSize(char.fontSize);
+					char.widthRate = char.isInit ? 0 : _char.widthRate + dt.analysis.volume * p.charWidth;
+					char.width = char.fontSize * char.widthRate;
+					char.pos = (() => {
+						if (index = 0) return s.createVector(0, size * 0.5);
+						if (!char.isInit) return _char.pos;
+						return p5.Vector.add(_char.pos, s.createVector(_char.width, 0));
+					})();
+					return char;
+				});
 			return dt;
 		}
 		dt = u.safe(getDt(dt, p, s), p);
@@ -33,8 +63,11 @@ const sketch = (s) => {
 		p.frameRate = s.isLooping() ? s.frameRate() : 0;
 		if (p.isInit) { p.isInit = false; }
 		function drawDt() {
-			s.fill(0);
-			s.circle(dt.pos.x, dt.pos.y, 50);
+			dt.chars.forEach((char, index) => {
+				if (index > dt.charIndex) return 0;
+				s.scale(char.widthRate, 1);
+				s.text(char.type, char.pos.x, char.po.y);
+			});
 		}
 		drawDt();
 		function playSnd() {}

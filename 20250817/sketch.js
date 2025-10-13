@@ -26,47 +26,64 @@ const sketch = (s) => {
 			dt.analysis = (() => {
 				// presude code before analyze sound
 				let analysis = {};
-				analysis.volume = s.noise(0.005 * s.frameCount);
-				analysis.isTrigger = analysis > p.volThres;
+				// 前のフレームより音が大きくなった時だけtriggerをonにする。でもpeakDetectみたいな関数欲しい
+				// https://p5js.org/reference/p5.sound/p5.PeakDetect/
+				// 仮で定期的にピークがオンになるような擬似にする
+				analysis.volume = s.noise(0.05 * s.frameCount);
+				analysis.isTrigger = s.frameCount % 60 === 0 ? true : false;
 				return analysis;
-			});
+			})();
 			dt.charIndex = (() => {
 				if (p.isInit) return 0;
 				if (!dt.analysis.isTrigger) return _dt.charIndex;
-				if (_dt.charIndex  < p.sentense.length) return 0;
+				if (_dt.charIndex + 1 > p.sentense.length) return 0;
 				return _dt.charIndex + 1;
 			})();
-			dt.chars = p.isInit || dt.charIndex == p.sentense.length - 1 ?
+			dt.isInit = p.isInit || dt.charIndex == p.sentense.length - 1
+			dt.chars = dt.isInit ?
 				[...Array(p.sentense.length)].map(() => 0) :
-				_dt.chars.map((_char, index) => {
-					if (index < dt.charIndex) return _char;
+				_dt.chars.map((_char, index, _chars) => {
 					let char = { ..._char };
 					char.isInit = _char == 0 ? true : false;
-					char.type = char.isInit ? p.sentense.charAt(index) : _char.type;
-					char.fontSize = char.isInit ? p.fontSizeRate * size : _char.fontSize;
-					if (char.isInit) s.textSize(char.fontSize);
-					char.widthRate = char.isInit ? 0 : _char.widthRate + dt.analysis.volume * p.charWidth;
-					char.width = char.fontSize * char.widthRate;
-					char.pos = (() => {
-						if (index = 0) return s.createVector(0, size * 0.5);
-						if (!char.isInit) return _char.pos;
-						return p5.Vector.add(_char.pos, s.createVector(_char.width, 0));
-					})();
+					char.isUpdate = dt.charIndex == index;
+					if (!char.isUpdate) return _char;
+					if (char.isInit) { // not updated
+						char.type = p.sentense.charAt(index);
+						char.fontSize = p.fontSizeRate * size;
+						s.textSize(char.fontSize);
+						char.pos = (() => {
+							if (index == 0) return s.createVector(0, size * 0.5);
+							const prePos = _chars[index - 1].pos;
+							const preWidth = _chars[index - 1].widrh;
+							// この計算が間違えていそう
+							return p5.Vector.add(prePos, s.createVector(preWidth, 0));
+						})();
+					}
+					if (char.isUpdate) {
+						char.widthRate = char.isInit ?
+							0 :
+							_char.widthRate + dt.analysis.volume * p.charWidth;
+						char.width = char.fontSize * char.widthRate;
+					}
 					return char;
 				});
 			return dt;
 		}
-		dt = u.safe(getDt(dt, p, s), p);
+		// dt = u.safe(getDt(dt, p, s), p);
+		dt = getDt(dt, p, s);
 		s.background(255);
 		u.drawFrame(s, size);
-		u.debug(s, p, dt, 3);
+		u.debug(s, p, dt, 20);
 		p.frameRate = s.isLooping() ? s.frameRate() : 0;
 		if (p.isInit) { p.isInit = false; }
 		function drawDt() {
 			dt.chars.forEach((char, index) => {
+				s.push();
 				if (index > dt.charIndex) return 0;
+				s.translate(char.pos.x, char.pos.y);
 				s.scale(char.widthRate, 1);
-				s.text(char.type, char.pos.x, char.po.y);
+				s.text(char.type, 0, 0);
+				s.pop();
 			});
 		}
 		drawDt();

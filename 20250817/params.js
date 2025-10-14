@@ -9,7 +9,7 @@ export const getParams = () => {
 		debugMode: true, // single point to toggle safety checks
 
 		// sketch / sound settings
-		sentense:"環境音に合わせてタイプされる。",
+		sentense:"環境音。",
 		volThres: 0.8,
 		charWidth: 0.1,
 		fontSizeRate: 0.1,

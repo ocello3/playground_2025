@@ -9,7 +9,6 @@ const sketch = (s) => {
 		u.initRoutine(s);
 		size = u.getSize(s);
 		p = getParams();
-		p = u.safe(p, p);
 		snd = (() => {
 			const snd = {};
 			return snd;
@@ -19,6 +18,8 @@ const sketch = (s) => {
 		});
 		const f1 = f.addFolder({ title: "sketch" });
 		const f2 = f.addFolder({ title: "sound" });
+		// set font size
+		s.textSize(p.fontSizeRate * size);
 	};
 	s.draw = () => {
 		function getDt(_dt, p, s) {
@@ -36,10 +37,10 @@ const sketch = (s) => {
 			dt.charIndex = (() => {
 				if (p.isInit) return 0;
 				if (!dt.analysis.isTrigger) return _dt.charIndex;
-				if (_dt.charIndex + 1 > p.sentense.length) return 0;
+				if (_dt.charIndex + 2 == p.sentense.length) return 0;
 				return _dt.charIndex + 1;
 			})();
-			dt.isInit = p.isInit || dt.charIndex == p.sentense.length - 1
+			dt.isInit = dt.charIndex == 0;
 			dt.chars = dt.isInit ?
 				[...Array(p.sentense.length)].map(() => 0) :
 				_dt.chars.map((_char, index, _chars) => {
@@ -49,13 +50,10 @@ const sketch = (s) => {
 					if (!char.isUpdate) return _char;
 					if (char.isInit) { // not updated
 						char.type = p.sentense.charAt(index);
-						char.fontSize = p.fontSizeRate * size;
-						s.textSize(char.fontSize);
 						char.pos = (() => {
 							if (index == 0) return s.createVector(0, size * 0.5);
 							const prePos = _chars[index - 1].pos;
-							const preWidth = _chars[index - 1].widrh;
-							// この計算が間違えていそう
+							const preWidth = _chars[index - 1].width;
 							return p5.Vector.add(prePos, s.createVector(preWidth, 0));
 						})();
 					}
@@ -63,13 +61,12 @@ const sketch = (s) => {
 						char.widthRate = char.isInit ?
 							0 :
 							_char.widthRate + dt.analysis.volume * p.charWidth;
-						char.width = char.fontSize * char.widthRate;
+						char.width = s.textWidth(char.type) * char.widthRate;
 					}
 					return char;
 				});
 			return dt;
 		}
-		// dt = u.safe(getDt(dt, p, s), p);
 		dt = getDt(dt, p, s);
 		s.background(255);
 		u.drawFrame(s, size);

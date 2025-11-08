@@ -22,7 +22,7 @@ const sketch = (s) => {
 		s.textSize(p.fontSizeRate * size);
 	};
 	s.draw = () => {
-		function getDt(_dt, p, s) {
+		function getDt(_dt) {
 			let dt = { ..._dt };
 			dt.analysis = (() => {
 				// presude code before analyze sound
@@ -37,37 +37,35 @@ const sketch = (s) => {
 			dt.charIndex = (() => {
 				if (p.isInit) return 0;
 				if (!dt.analysis.isTrigger) return _dt.charIndex;
-				if (_dt.charIndex + 2 == p.sentense.length) return 0;
+				if (_dt.charIndex + 1 == p.sentense.length) return 0;
 				return _dt.charIndex + 1;
 			})();
-			dt.isInit = dt.charIndex == 0;
-			dt.chars = dt.isInit ?
-				[...Array(p.sentense.length)].map(() => 0) :
-				_dt.chars.map((_char, index, _chars) => {
-					let char = { ..._char };
-					char.isInit = _char == 0 ? true : false;
-					char.isUpdate = dt.charIndex == index;
-					if (!char.isUpdate) return _char;
-					if (char.isInit) { // not updated
+			dt.chars = Array(p.sentense.length).fill(0).map((_, index) => {
+				if (index > dt.charIndex) return 0; // waiting char
+				if (dt.charIndex == index) { // updating char
+					if (p.isInit || _dt.charIndex != dt.charIndex) { // init
+						let char = {};
 						char.type = p.sentense.charAt(index);
 						char.pos = (() => {
-							if (index == 0) return s.createVector(0, size * 0.5);
-							const prePos = _chars[index - 1].pos;
-							const preWidth = _chars[index - 1].width;
+							if (dt.charIndex == 0) return s.createVector(0, size * 0.5);
+							const prePos = _dt.chars[_dt.charIndex].pos;
+							const preWidth = _dt.chars[_dt.charIndex].width;
 							return p5.Vector.add(prePos, s.createVector(preWidth, 0));
 						})();
+						char.widthRate = 0;
+						return char;
 					}
-					if (char.isUpdate) {
-						char.widthRate = char.isInit ?
-							0 :
-							_char.widthRate + dt.analysis.volume * p.charWidth;
-						char.width = s.textWidth(char.type) * char.widthRate;
-					}
+					// update
+					let char = { ..._dt.chars[index] };
+					char.widthRate = _dt.chars[_dt.charIndex].widthRate + dt.analysis.volume * p.charWidth;
+					char.width = s.textWidth(char.type) * char.widthRate;
 					return char;
-				});
+				}
+				return _dt.chars[index]; // updated char
+			});
 			return dt;
 		}
-		dt = getDt(dt, p, s);
+		dt = getDt(dt);
 		s.background(255);
 		u.drawFrame(s, size);
 		u.debug(s, p, dt, 20);

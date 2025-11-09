@@ -20,37 +20,44 @@ export function initRoutine(s) {
  * - creates a Tweakpane folder bound to p
  * - activate is called on the first play event
  */
-export function createPane(s, p, activate = undefined) {
-	const pane = new Pane({ container: document.getElementById("pane") });
-	const f = pane.addFolder({ title: "pane" });
-
-	f.addBinding(p, "play").on("change", (ev) => {
-		if (ev.value) {
+// create pane by tweakpane and return folder as 'f'
+export const createPane = (s, p, activate = undefined) => {
+	const pane = new Pane({
+		container: document.getElementById("pane"),
+	});
+	const f = pane.addFolder({
+		title: "pane",
+	});
+	f.addBinding(p, "play").on("change", (isChecked) => {
+		if (isChecked.value) {
 			s.userStartAudio();
 			s.loop();
 			p.vol = 0.8;
 			s.outputVolume(p.vol, 0.1);
 			pane.refresh();
 			if (p.isInit) {
-				if (activate) activate();
+				if (activate != undefined) activate();
 				p.isInit = false;
 			}
+			return;
 		} else {
 			p.vol = 0;
 			s.outputVolume(p.vol, 0.1);
 			s.noLoop();
 			pane.refresh();
+			return;
 		}
 	});
-
-	f.addBinding(p, "vol", { min: 0, max: 1 }).on("change", (ev) =>
-		s.outputVolume(ev.value)
-	);
-
-	f.addBinding(p, "frameRate", { readonly: true, interval: 500 });
-
+	f.addBinding(p, "vol", {
+		min: 0,
+		max: 1,
+	}).on("change", (vol) => s.outputVolume(vol.value));
+	f.addBinding(p, "frameRate", {
+		readonly: true,
+		interval: 500,
+	});
 	return f;
-}
+};
 
 /* ----------------------
    Debug helpers
@@ -179,81 +186,4 @@ export function pp(s, func, pg = undefined) {
 		func();
 		pg.pop();
 	}
-}
-
-/* ----------------------
-   Proxy safe functions
-   ---------------------- */
-
-function safeStringify(obj, maxLen = 200) {
-	try {
-		let str = JSON.stringify(obj);
-		if (str.length > maxLen) str = str.slice(0, maxLen) + "...(truncated)";
-		return str;
-	} catch {
-		return "[unserializable]";
-	}
-}
-
-function deepSafe(obj, debugMode) {
-	if (!debugMode || typeof obj !== "object" || obj === null) return obj;
-
-	const handler = {
-		get(target, prop, receiver) {
-			if (Array.isArray(target) && typeof prop === "string") {
-				const idx = Number(prop);
-				if (!Number.isNaN(idx)) {
-					if (idx < 0 || idx >= target.length) {
-						throw new Error(
-							`Error | array out of bounds: index=${idx}, length=${target.length}\n` +
-							`Target array: ${safeStringify(target)}`
-						);
-					}
-				}
-			}
-			if (!(prop in target)) {
-				throw new Error(
-					`Error | property "${prop.toString()}" does not exist\n` +
-					`Target object: ${safeStringify(target)}`
-				);
-			}
-
-			const value = Reflect.get(target, prop, receiver);
-
-			if (typeof p5 !== "undefined" && value instanceof p5.Vector) return value;
-
-			return deepSafe(value, true);
-		},
-
-		set(target, prop, value, receiver) {
-			if (Array.isArray(target) && typeof prop === "string") {
-				const idx = Number(prop);
-				if (!Number.isNaN(idx)) {
-					if (idx < 0 || idx >= target.length) {
-						throw new Error(
-							`Error | array write out of bounds: index=${idx}, length=${target.length}\n` +
-							`Target array: ${safeStringify(target)}`
-						);
-					}
-				}
-			}
-			if (!(prop in target)) {
-				throw new Error(
-					`Error | property "${prop.toString()}" does not exist (set)\n` +
-					`Target object: ${safeStringify(target)}`
-				);
-			}
-			return Reflect.set(target, prop, value, receiver);
-		}
-	};
-
-	return new Proxy(obj, handler);
-}
-
-/**
- * safe(obj, params)
- * - reads params.debugMode and returns either raw obj or Proxy-wrapped object
- */
-export function safe(obj, params) {
-	return deepSafe(obj, !!params?.debugMode);
 }

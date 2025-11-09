@@ -5,16 +5,26 @@ import { getParams } from "./params.js";
 
 const sketch = (s) => {
 	let p, size, dt, snd;
+	s.preload = () => {
+		s.soundFormats('wav');
+		snd = (() => {
+			const snd = {};
+			snd.rain = s.loadSound('./rain.wav');
+			return snd;
+		})();
+	}
 	s.setup = () => {
 		u.initRoutine(s);
 		size = u.getSize(s);
 		p = getParams();
-		snd = (() => {
-			const snd = {};
-			return snd;
-		})();
+		snd.rain.loop();
+		snd.amp = new p5.Amplitude();
+		snd.amp.setInput(snd.rain);
+		snd.fft = new p5.FFT();
+		snd.peak = new p5.PeakDetect(50, 1000, 0.07, 1); // freq1, freq2, threshold, framesPerPeak
 		const f = u.createPane(s, p, () => {
 			// (activate) snd.osc.start());
+			snd.rain.play();
 		});
 		const f1 = f.addFolder({ title: "sketch" });
 		const f2 = f.addFolder({ title: "sound" });
@@ -27,11 +37,11 @@ const sketch = (s) => {
 			dt.analysis = (() => {
 				// presude code before analyze sound
 				let analysis = {};
-				// 前のフレームより音が大きくなった時だけtriggerをonにする。でもpeakDetectみたいな関数欲しい
-				// https://p5js.org/reference/p5.sound/p5.PeakDetect/
-				// 仮で定期的にピークがオンになるような擬似にする
-				analysis.volume = s.noise(0.05 * s.frameCount);
-				analysis.isTrigger = s.frameCount % 60 === 0 ? true : false;
+				analysis.volume = snd.amp.getLevel() * 250; // 200をパラメータにする。peak音量と文字数から計算できるとよい
+				// analysis.isTrigger = s.frameCount % 10 === 0 ? true : false; // tmp
+				snd.fft.analyze();
+				snd.peak.update(snd.fft);
+				analysis.isTrigger = snd.peak.isDetected;
 				return analysis;
 			})();
 			dt.charIndex = (() => {
@@ -52,13 +62,13 @@ const sketch = (s) => {
 							const preWidth = _dt.chars[_dt.charIndex].width;
 							return p5.Vector.add(prePos, s.createVector(preWidth, 0));
 						})();
-						char.widthRate = 0;
+						char.sizeRate = 0;
 						return char;
 					}
 					// update
 					let char = { ..._dt.chars[index] };
-					char.widthRate = _dt.chars[_dt.charIndex].widthRate + dt.analysis.volume * p.charWidth;
-					char.width = s.textWidth(char.type) * char.widthRate;
+					char.sizeRate = _dt.chars[_dt.charIndex].sizeRate + dt.analysis.volume * p.charWidth;
+					char.width = s.textWidth(char.type) * char.sizeRate;
 					return char;
 				}
 				return _dt.chars[index]; // updated char
@@ -70,13 +80,12 @@ const sketch = (s) => {
 		u.drawFrame(s, size);
 		u.debug(s, p, dt, 20);
 		p.frameRate = s.isLooping() ? s.frameRate() : 0;
-		if (p.isInit) { p.isInit = false; }
 		function drawDt() {
 			dt.chars.forEach((char, index) => {
-				s.push();
 				if (index > dt.charIndex) return 0;
+				s.push();
 				s.translate(char.pos.x, char.pos.y);
-				s.scale(char.widthRate, 1);
+				s.scale(char.sizeRate, char.sizeRate);
 				s.text(char.type, 0, 0);
 				s.pop();
 			});

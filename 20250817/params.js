@@ -11,8 +11,9 @@ export const getParams = () => {
 		// sketch / sound settings
 		sentense:"single point to toggle safety checks",
 		volThres: 0.8,
-		charWidth: 0.1,
+		charWidth: 0.004,
 		fontSizeRate: 0.1,
+		grid: 5,
 		colors: [
 			[255, 0, 0],
 			[0, 180, 255],

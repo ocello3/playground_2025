@@ -29,6 +29,7 @@ const sketch = (s) => {
 		const f1 = f.addFolder({ title: "sketch" });
 		const f2 = f.addFolder({ title: "sound" });
 		// set font size
+		// s.textAlign(s.LEFT, s.TOP)
 		s.textSize(p.fontSizeRate * size);
 	};
 	s.draw = () => {
@@ -57,17 +58,29 @@ const sketch = (s) => {
 						let char = {};
 						char.type = p.sentense.charAt(index);
 						char.pos = (() => {
-							if (dt.charIndex == 0) return s.createVector(0, size * 0.5);
-							const prePos = _dt.chars[_dt.charIndex].pos;
-							const preWidth = _dt.chars[_dt.charIndex].width;
-							return p5.Vector.add(prePos, s.createVector(preWidth, 0));
+							const prePos = p.isInit ?
+								s.createVector(0, size / p.grid * 2) :
+								_dt.chars[_dt.charIndex].pos;
+							const preWidth = p.isInit ? 0 : _dt.chars[_dt.charIndex].width;
+							const addedXpos = prePos.x + preWidth;
+							const addedYpos = prePos.y + size / p.grid;
+							if (addedXpos < size) {
+								return s.createVector(addedXpos, prePos.y);
+							} else {
+								if (addedYpos < (size / p.grid) * 5) {
+									return s.createVector(0, addedYpos);
+								} else {
+									return s.createVector(0, size / p.grid * 2);
+								}
+							}
 						})();
 						char.sizeRate = 0;
 						return char;
 					}
 					// update
 					let char = { ..._dt.chars[index] };
-					char.sizeRate = _dt.chars[_dt.charIndex].sizeRate + dt.analysis.volume * p.charWidth;
+					// char.sizeRate = _dt.chars[_dt.charIndex].sizeRate + dt.analysis.volume * p.charWidth; // 徐々に大きく
+					char.sizeRate = dt.analysis.volume * p.charWidth * size;
 					char.width = s.textWidth(char.type) * char.sizeRate;
 					return char;
 				}
@@ -83,6 +96,7 @@ const sketch = (s) => {
 		function drawDt() {
 			dt.chars.forEach((char, index) => {
 				if (index > dt.charIndex) return 0;
+				s.fill(0, 200);
 				s.push();
 				s.translate(char.pos.x, char.pos.y);
 				s.scale(char.sizeRate, char.sizeRate);

@@ -59,18 +59,18 @@ const sketch = (s) => {
 						char.type = p.sentense.charAt(index);
 						char.pos = (() => {
 							const prePos = p.isInit ?
-								s.createVector(0, size / p.grid * 2) :
+								s.createVector(size / p.grid, size / p.grid * 2) :
 								_dt.chars[_dt.charIndex].pos;
 							const preWidth = p.isInit ? 0 : _dt.chars[_dt.charIndex].width;
 							const addedXpos = prePos.x + preWidth;
 							const addedYpos = prePos.y + size / p.grid;
-							if (addedXpos < size) {
+							if (addedXpos < size - (size / p.grid)) {
 								return s.createVector(addedXpos, prePos.y);
 							} else {
 								if (addedYpos < (size / p.grid) * 5) {
-									return s.createVector(0, addedYpos);
+									return s.createVector(size / p.grid, addedYpos);
 								} else {
-									return s.createVector(0, size / p.grid * 2);
+									return s.createVector(size / p.grid, size / p.grid * 2);
 								}
 							}
 						})();
@@ -86,6 +86,12 @@ const sketch = (s) => {
 				}
 				return _dt.chars[index]; // updated char
 			});
+			dt.snd = (() => {
+				let snd = {};
+				const x = dt.chars[dt.charIndex].pos.x;
+				snd.pan = s.map(x, 0, size, -1, 1);
+				return snd;
+			})();
 			return dt;
 		}
 		dt = getDt(dt);
@@ -105,7 +111,9 @@ const sketch = (s) => {
 			});
 		}
 		drawDt();
-		function playSnd() {}
+		function playSnd() {
+			snd.rain.pan(dt.snd.pan);
+		}
 		playSnd();
 	};
 	s.windowResized = () => {

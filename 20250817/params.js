@@ -9,10 +9,10 @@ export const getParams = () => {
 		debugMode: true, // single point to toggle safety checks
 
 		// sketch / sound settings
-		sentense:"single point to toggle safety checks",
+		sentense:`<title>sketch</title><script src="sketch.js" type="module"></script>`,
 		volThres: 0.8,
 		charWidth: 0.004,
-		fontSizeRate: 0.1,
+		fontSizeRate: 0.02,
 		grid: 5,
 		colors: [
 			[255, 0, 0],

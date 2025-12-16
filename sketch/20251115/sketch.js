@@ -17,7 +17,8 @@ const sketch = (s) => {
 		snd.amp = new p5.Amplitude();
 		snd.amp.setInput(snd.rain);
 		snd.fft = new p5.FFT();
-		snd.peak = new p5.PeakDetect(50, 1000, 0.07, 1); // freq1, freq2, threshold, framesPerPeak
+		snd.onset = new p5.OnsetDetect(0.1, 2000); // threshold, decay
+		// snd.onset.setInput(snd.rain);
 		const f = u.createPane(s, p, () => {
 			// (activate) snd.osc.start());
 			snd.rain.play();
@@ -49,13 +50,14 @@ const sketch = (s) => {
 				dsp.resolusion = p.isInit ? s.sampleRate() / dsp.fftSize : _dt.dsp.resolution;
 				dsp.spec = snd.fft.analyze();
 				dsp.scale = p.isInit ? dsp.spec.map((_, i) => i * (s.sampleRate() / dsp.fftSize)) : _dt.dsp.scale;
+				dsp.isDetect = snd.onset.detect(snd.fft);
 				return dsp;
 			})();
 			dt.bin = (p.isInit || p.isMoved) ? (() => {
 				// calc displayed bins
 				let bin = {};
-				bin.min = s.floor(p.minFreq / s.sampleRate() / dt.dsp.fftSize);
-				const t_max = s.floor(p.maxFreq / s.sampleRate() / dt.dsp.fftSize);
+				bin.min = s.floor(p.minFreq / (s.sampleRate() / dt.dsp.fftSize));
+				const t_max = s.floor(p.maxFreq / (s.sampleRate() / dt.dsp.fftSize));
 				bin.max = t_max > bin.min ? t_max : bin.min + 1;
 				bin.count = bin.max - bin.min;
 				return bin;
@@ -90,6 +92,11 @@ const sketch = (s) => {
 		p.isMoved = false;
 
 		function drawDt() {
+			if (dt.dsp.isDetect) {
+				s.fill(255, 0, 0);
+			} else {
+				s.fill(0);
+			}
 			dt.fft.forEach(fft => {
 				s.rect(fft.x, fft.y, fft.w, fft.h);
 			});

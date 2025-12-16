@@ -11,7 +11,7 @@ export const getParams = () => {
 		// sketch
 		bins: 1024,
 		labels: 10,
-		minFreq: 0,
+		minFreq: 100,
 		maxFreq: 5000,
 		isMoved: false, // slider trigger
 	};

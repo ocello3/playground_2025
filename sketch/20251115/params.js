@@ -14,5 +14,6 @@ export const getParams = () => {
 		minFreq: 100,
 		maxFreq: 5000,
 		isMoved: false, // slider trigger
+		isDetect: false, // 
 	};
 };

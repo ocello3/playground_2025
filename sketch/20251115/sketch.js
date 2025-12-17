@@ -17,7 +17,10 @@ const sketch = (s) => {
 		snd.amp = new p5.Amplitude();
 		snd.amp.setInput(snd.rain);
 		snd.fft = new p5.FFT();
-		snd.onset = new p5.OnsetDetect(0.1, 2000); // threshold, decay
+		snd.onset = new p5.OnsetDetect(20, 20000, 0.005, () => {
+			p.isDetect = true;
+			console.log('detected');
+		});
 		// snd.onset.setInput(snd.rain);
 		const f = u.createPane(s, p, () => {
 			// (activate) snd.osc.start());
@@ -50,7 +53,6 @@ const sketch = (s) => {
 				dsp.resolusion = p.isInit ? s.sampleRate() / dsp.fftSize : _dt.dsp.resolution;
 				dsp.spec = snd.fft.analyze();
 				dsp.scale = p.isInit ? dsp.spec.map((_, i) => i * (s.sampleRate() / dsp.fftSize)) : _dt.dsp.scale;
-				dsp.isDetect = snd.onset.detect(snd.fft);
 				return dsp;
 			})();
 			dt.bin = (p.isInit || p.isMoved) ? (() => {
@@ -89,10 +91,14 @@ const sketch = (s) => {
 		u.drawFrame(s, size);
 		u.debug(s, p, dt.bin, 10);
 		p.frameRate = s.isLooping() ? s.frameRate() : 0;
-		p.isMoved = false;
-
+		
+		function playSnd() {
+			snd.onset.update(snd.fft);
+		}
+		playSnd();
+		
 		function drawDt() {
-			if (dt.dsp.isDetect) {
+			if (p.isDetect) {
 				s.fill(255, 0, 0);
 			} else {
 				s.fill(0);
@@ -110,9 +116,10 @@ const sketch = (s) => {
 			});
 		}
 		drawDt();
-
-		function playSnd() {}
-		playSnd();
+		
+		// itit params
+		p.isMoved = false;
+		p.isDetect = false;
 	};
 	s.windowResized = () => {
 		size = u.getSize(s);

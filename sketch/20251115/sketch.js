@@ -17,7 +17,7 @@ const sketch = (s) => {
 		snd.amp = new p5.Amplitude();
 		snd.amp.setInput(snd.rain);
 		snd.fft = new p5.FFT();
-		snd.onset = new p5.OnsetDetect(20, 20000, 0.005, () => {
+		snd.onset = new p5.OnsetDetect(p.detectMinFreq, p.detectMaxFreq, p.detectThresh, () => {
 			p.isDetect = true;
 			console.log('detected');
 		});
@@ -40,6 +40,24 @@ const sketch = (s) => {
 		}).on('change', () => {
 			p.isMoved = true;
 		});
+		f2.addBinding(p, 'detectMinFreq', {
+			min: 0,
+			max: 22000,
+		}).on('change', (ev) => {
+			snd.onset.freqLow = ev.value;
+		});
+		f2.addBinding(p, 'detectMaxFreq', {
+			min: 0,
+			max: 22000,
+		}).on('change', (ev) => {
+			snd.onset.freqHigh = ev.value;
+		});
+		f2.addBinding(p, 'detectThresh', {
+			min: 0.001,
+			max: 0.1,
+		}).on('change', (ev) => {
+			snd.onset.threshold = ev.value;
+		});
 		// set font size
 		// s.textAlign(s.LEFT, s.TOP)
 		s.textSize(p.fontSizeRate * size);
@@ -52,14 +70,15 @@ const sketch = (s) => {
 				dsp.fftSize = p.isInit ? p.bins * 2 : _dt.dsp.fftSize;
 				dsp.resolusion = p.isInit ? s.sampleRate() / dsp.fftSize : _dt.dsp.resolution;
 				dsp.spec = snd.fft.analyze();
-				dsp.scale = p.isInit ? dsp.spec.map((_, i) => i * (s.sampleRate() / dsp.fftSize)) : _dt.dsp.scale;
+				dsp.block = p.isInit ? s.sampleRate() / dsp.fftSize : _dt.dsp.block;
+				dsp.scale = p.isInit ? dsp.spec.map((_, i) => i * dsp.block) : _dt.dsp.scale;
 				return dsp;
 			})();
 			dt.bin = (p.isInit || p.isMoved) ? (() => {
-				// calc displayed bins
+				// calc displayed bin index
 				let bin = {};
-				bin.min = s.floor(p.minFreq / (s.sampleRate() / dt.dsp.fftSize));
-				const t_max = s.floor(p.maxFreq / (s.sampleRate() / dt.dsp.fftSize));
+				bin.min = s.floor(p.minFreq / dt.dsp.block);
+				const t_max = s.floor(p.maxFreq / dt.dsp.block);
 				bin.max = t_max > bin.min ? t_max : bin.min + 1;
 				bin.count = bin.max - bin.min;
 				return bin;

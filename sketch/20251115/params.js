@@ -13,7 +13,10 @@ export const getParams = () => {
 		labels: 10,
 		minFreq: 100,
 		maxFreq: 5000,
+		detectMinFreq: 500,
+		detectMaxFreq: 4000,
+		detectThresh: 0.005,
 		isMoved: false, // slider trigger
-		isDetect: false, // 
+		isDetect: false,
 	};
 };

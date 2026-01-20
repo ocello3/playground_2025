@@ -45,18 +45,21 @@ const sketch = (s) => {
 			max: 22000,
 		}).on('change', (ev) => {
 			if (ev < p.detectMaxFreq) snd.onset.freqLow = ev.value;
+			p.isMoved = true;
 		});
 		f2.addBinding(p, 'detectMaxFreq', {
 			min: 0,
 			max: 22000,
 		}).on('change', (ev) => {
 			if (ev > p.detectMinFreq) snd.onset.freqHigh = ev.value;
+			p.isMoved = true;
 		});
 		f2.addBinding(p, 'detectThresh', {
 			min: 0.001,
 			max: 0.1,
 		}).on('change', (ev) => {
 			snd.onset.threshold = ev.value;
+			p.isMoved = true;
 		});
 		// set font size
 		// s.textAlign(s.LEFT, s.TOP)
@@ -74,7 +77,7 @@ const sketch = (s) => {
 				dsp.scale = p.isInit ? dsp.spec.map((_, i) => i * dsp.block) : _dt.dsp.scale;
 				return dsp;
 			})();
-			dt.bin = (p.isInit || p.isMoved) ? (() => {
+			dt.bin = (p.isInit || p.isMoved) ? (() => { // たぶん計算間違い
 				// calc displayed bin index
 				let bin = {};
 				bin.min = s.floor(p.minFreq / dt.dsp.block);
@@ -82,9 +85,11 @@ const sketch = (s) => {
 				bin.max = t_max > bin.min ? t_max : bin.min + 1;
 				bin.count = bin.max - bin.min;
 				// calc peak detection range
-				bin.detectMin = s.floor(p.detectMinFreq / dt.dsp.block);
-				bin.detectMax = s.floor(p.detectMaxFreq / dt.dsp.bloc
-				bin.detectCount = bin.detectMin < bin.detectMax ? bin.detectMax - bin.detectMin : 0;
+				const detectMin = s.floor(p.detectMinFreq / dt.dsp.block);
+				const detectMax = s.floor(p.detectMaxFreq / dt.dsp.block);
+				const detectDiff = detectMax - detectMin;
+				bin.detectCount = detectDiff > 0 ? detectDiff : 0;
+				bin.detectId0 = bin.min - detectMin;
 				return bin;
 			})() : _dt.bin;
 			dt.fft = dt.dsp.spec
@@ -121,12 +126,19 @@ const sketch = (s) => {
 		playSnd();
 		
 		function drawDt() {
+			/*
 			if (p.isDetect) {
 				s.fill(255, 0, 0);
 			} else {
 				s.fill(0);
 			}
-			dt.fft.forEach(fft => {
+			*/
+			dt.fft.forEach((fft, i) => {
+				if (dt.bin.detectId0 < i && i < dt.bin.detectId0 + dt.bin.detectCount) {
+					s.fill(0);
+				} else {
+					s.fill(0, 0, 255);
+				}
 				s.rect(fft.x, fft.y, fft.w, fft.h);
 			});
 			dt.scale.forEach(scale => {

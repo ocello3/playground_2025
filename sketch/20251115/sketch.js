@@ -44,13 +44,13 @@ const sketch = (s) => {
 			min: 0,
 			max: 22000,
 		}).on('change', (ev) => {
-			snd.onset.freqLow = ev.value;
+			if (ev < p.detectMaxFreq) snd.onset.freqLow = ev.value;
 		});
 		f2.addBinding(p, 'detectMaxFreq', {
 			min: 0,
 			max: 22000,
 		}).on('change', (ev) => {
-			snd.onset.freqHigh = ev.value;
+			if (ev > p.detectMinFreq) snd.onset.freqHigh = ev.value;
 		});
 		f2.addBinding(p, 'detectThresh', {
 			min: 0.001,
@@ -81,6 +81,10 @@ const sketch = (s) => {
 				const t_max = s.floor(p.maxFreq / dt.dsp.block);
 				bin.max = t_max > bin.min ? t_max : bin.min + 1;
 				bin.count = bin.max - bin.min;
+				// calc peak detection range
+				bin.detectMin = s.floor(p.detectMinFreq / dt.dsp.block);
+				bin.detectMax = s.floor(p.detectMaxFreq / dt.dsp.bloc
+				bin.detectCount = bin.detectMin < bin.detectMax ? bin.detectMax - bin.detectMin : 0;
 				return bin;
 			})() : _dt.bin;
 			dt.fft = dt.dsp.spec

@@ -77,7 +77,7 @@ const sketch = (s) => {
 				dsp.scale = p.isInit ? dsp.spec.map((_, i) => i * dsp.block) : _dt.dsp.scale;
 				return dsp;
 			})();
-			dt.bin = (p.isInit || p.isMoved) ? (() => { // たぶん計算間違い
+			dt.bin = (p.isInit || p.isMoved) ? (() => {
 				// calc displayed bin index
 				let bin = {};
 				bin.min = s.floor(p.minFreq / dt.dsp.block);
@@ -89,7 +89,7 @@ const sketch = (s) => {
 				const detectMax = s.floor(p.detectMaxFreq / dt.dsp.block);
 				const detectDiff = detectMax - detectMin;
 				bin.detectCount = detectDiff > 0 ? detectDiff : 0;
-				bin.detectId0 = bin.min - detectMin;
+				bin.detectId0 = detectMin - bin.min;
 				return bin;
 			})() : _dt.bin;
 			dt.fft = dt.dsp.spec
@@ -133,11 +133,12 @@ const sketch = (s) => {
 				s.fill(0);
 			}
 			*/
+			s.noStroke();
 			dt.fft.forEach((fft, i) => {
-				if (dt.bin.detectId0 < i && i < dt.bin.detectId0 + dt.bin.detectCount) {
-					s.fill(0);
-				} else {
+				if (i > dt.bin.detectId0 && i < (dt.bin.detectId0 + dt.bin.detectCount)) {
 					s.fill(0, 0, 255);
+				} else {
+					s.fill(0);
 				}
 				s.rect(fft.x, fft.y, fft.w, fft.h);
 			});

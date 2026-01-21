@@ -66,6 +66,11 @@ const sketch = (s) => {
 		s.textSize(p.fontSizeRate * size);
 	};
 	s.draw = () => {
+		function updateSnd() {
+			snd.onset.update(snd.fft);
+		}
+		updateSnd();
+		
 		function getDt(_dt) {
 			let dt = { ..._dt };
 			dt.dsp = (() => {
@@ -102,6 +107,13 @@ const sketch = (s) => {
 					fft.y = size - fft.h;
 					return fft;
 				});
+			dt.detectLevel = (() => {
+				if (p.isInit) return 0;
+				if (p.isDetect) return 100;
+				const newLevel = _dt.detectLevel - 1;
+				if (newLevel < 0) return 0;
+				return newLevel;
+			})();
 			dt.scale = (p.isInit || p.isMoved) ? Array(p.labels).fill(0).map((_, i) => {
 				let scale = {};
 				const displayScale = dt.dsp.scale.filter((_, i) => i >= dt.bin.min && i < dt.bin.max);
@@ -117,26 +129,19 @@ const sketch = (s) => {
 		dt = getDt(dt);
 		s.background(255);
 		u.drawFrame(s, size);
-		u.debug(s, p, dt.bin, 10);
+		u.debug(s, p, dt, 2);
 		p.frameRate = s.isLooping() ? s.frameRate() : 0;
 		
 		function playSnd() {
-			snd.onset.update(snd.fft);
+			// snd.onset.update(snd.fft);
 		}
 		playSnd();
 		
 		function drawDt() {
-			/*
-			if (p.isDetect) {
-				s.fill(255, 0, 0);
-			} else {
-				s.fill(0);
-			}
-			*/
 			s.noStroke();
-			dt.fft.forEach((fft, i) => {
+			dt.fft.forEach((fft, i) => { // ここから再開 dt.detectLevelの使い方をかえる
 				if (i > dt.bin.detectId0 && i < (dt.bin.detectId0 + dt.bin.detectCount)) {
-					s.fill(0, 0, 255);
+					s.fill(0, s.map(dt.detectLevel, 0, 100, 0, 255));
 				} else {
 					s.fill(0);
 				}

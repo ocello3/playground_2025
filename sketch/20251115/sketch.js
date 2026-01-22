@@ -56,7 +56,7 @@ const sketch = (s) => {
 		});
 		f2.addBinding(p, 'detectThresh', {
 			min: 0.001,
-			max: 0.1,
+			max: 1,
 		}).on('change', (ev) => {
 			snd.onset.threshold = ev.value;
 			p.isMoved = true;
@@ -110,7 +110,7 @@ const sketch = (s) => {
 			dt.detectLevel = (() => {
 				if (p.isInit) return 0;
 				if (p.isDetect) return 100;
-				const newLevel = _dt.detectLevel - 1;
+				const newLevel = _dt.detectLevel - 3;
 				if (newLevel < 0) return 0;
 				return newLevel;
 			})();
@@ -118,12 +118,23 @@ const sketch = (s) => {
 				let scale = {};
 				const displayScale = dt.dsp.scale.filter((_, i) => i >= dt.bin.min && i < dt.bin.max);
 				scale.binIndex = s.floor(dt.bin.count / p.labels) * i;
-				scale.value = s.floor(displayScale[scale.binIndex]);
+				const freq = s.floor(displayScale[scale.binIndex])/1000;
+				const order = Math.floor(Math.log10(freq));
+				const factor = Math.pow(10, order);
+				scale.value = freq === 0 ? 0 : Math.floor(freq / factor) * factor;
 				const x = size / p.labels * i;
 				const y = size * 0.1;
 				scale.pos = s.createVector(x, y);
 				return scale;
 			}) : _dt.scale;
+			dt.arrow = (() => {
+				const arrow = {};
+				const y = size * 0.2;
+				arrow.start = s.createVector(dt.fft[dt.bin.detectId0].x, y);
+				arrow.end = s.createVector(dt.fft[dt.bin.detectId0 + dt.bin.detectCount].x, y);
+				return arrow;
+				// この数値「使って矢印を描画するところから再開する
+			})();
 			return dt;
 		}
 		dt = getDt(dt);
@@ -141,17 +152,18 @@ const sketch = (s) => {
 			s.noStroke();
 			dt.fft.forEach((fft, i) => { // ここから再開 dt.detectLevelの使い方をかえる
 				if (i > dt.bin.detectId0 && i < (dt.bin.detectId0 + dt.bin.detectCount)) {
-					s.fill(0, s.map(dt.detectLevel, 0, 100, 0, 255));
+					s.fill(255, 0, 0, s.map(dt.detectLevel, 0, 100, 255, 0));
 				} else {
-					s.fill(0);
+					s.fill(50);
 				}
 				s.rect(fft.x, fft.y, fft.w, fft.h);
 			});
 			dt.scale.forEach(scale => {
 				s.push();
-				s.textSize(size * 0.05);
+				s.fill(0);
+				s.textSize(size * 0.03);
 				s.translate(scale.pos.x, scale.pos.y);
-				s.rotate(s.HALF_PI);
+				// s.rotate(s.HALF_PI);
 				s.text(scale.value, 0, 0, 10);
 				s.pop();
 			});

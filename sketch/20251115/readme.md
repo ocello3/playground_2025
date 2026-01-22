@@ -6,9 +6,7 @@ fftのvisualizerをできれば外部ライブラリとして利用可能な形�
 
 # todo
 onsetDetectの最低周波数と最高周波数をtweakpaneから操作できるようにする → してみたけど、動いてるか分からない
-minがmaxを超えないようにする clamp ? ok
-bin.detectMin, bin.detectMax, bin.detectCountを追加したので、それを使って最低周波数と最高周波数の範囲の色を変える
-ここから: p.isDetectでalphaを計算する。peak検出時に色を変えてるけど、一瞬だから徐々に消えるようにする
+detectする周波数の範囲を矢印でも示す
 peakDetectとかを組み合わせる
 指定した周波数の範囲の色を変える
 
@@ -44,7 +42,9 @@ paneは設定できたはず
 
 エラーは出てないけど、fftの音量が全部の配列で一定で、scaleの数字も全部同じになってしまってる
 -> カッコの修正でたぶん直った
-
+minがmaxを超えないようにする clamp ? ok
+bin.detectMin, bin.detectMax, bin.detectCountを追加したので、それを使って最低周波数と最高周波数の範囲の色を変える
+ここから: p.isDetectでalphaを計算する。peak検出時に色を変えてるけど、一瞬だから徐々に消えるようにする
 # later
 
 

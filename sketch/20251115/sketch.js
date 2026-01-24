@@ -31,27 +31,43 @@ const sketch = (s) => {
 		f2.addBinding(p, 'minFreq', {
 			min: 0,
 			max: 22000,
-		}).on('change', () => {
+		}).on('change', (ev) => {
+			if (ev.value > p.maxFreq) {
+				p.maxFreq = ev.value + 1;
+				f.refresh();
+			}
 			p.isMoved = true;
 		});
 		f2.addBinding(p, 'maxFreq', {
 			min: 0,
 			max: 22000,
-		}).on('change', () => {
+		}).on('change', (ev) => {
+			if (ev.value < p.minFreq) {
+				p.minFreq = ev.value - 1;
+				f.refresh();
+			}
 			p.isMoved = true;
 		});
 		f2.addBinding(p, 'detectMinFreq', {
 			min: 0,
 			max: 22000,
 		}).on('change', (ev) => {
-			if (ev < p.detectMaxFreq) snd.onset.freqLow = ev.value;
+			if (ev.value < p.detectMaxFreq) snd.onset.freqLow = ev.value;
+			if (ev.value < p.minFreq) {
+				p.minFreq = ev.value - 1;
+				f.refresh();
+			}
 			p.isMoved = true;
 		});
 		f2.addBinding(p, 'detectMaxFreq', {
 			min: 0,
 			max: 22000,
 		}).on('change', (ev) => {
-			if (ev > p.detectMinFreq) snd.onset.freqHigh = ev.value;
+			if (ev.value > p.detectMinFreq) snd.onset.freqHigh = ev.value;
+			if (ev.value > p.maxFreq) {
+				p.maxFreq = ev.value + 1;
+				f.refresh();
+			}
 			p.isMoved = true;
 		});
 		f2.addBinding(p, 'detectThresh', {
@@ -61,8 +77,6 @@ const sketch = (s) => {
 			snd.onset.threshold = ev.value;
 			p.isMoved = true;
 		});
-		// set font size
-		// s.textAlign(s.LEFT, s.TOP)
 		s.textSize(p.fontSizeRate * size);
 	};
 	s.draw = () => {
@@ -130,17 +144,19 @@ const sketch = (s) => {
 			dt.arrow = (() => {
 				const arrow = {};
 				const y = size * 0.2;
-				arrow.start = s.createVector(dt.fft[dt.bin.detectId0].x, y);
-				arrow.end = s.createVector(dt.fft[dt.bin.detectId0 + dt.bin.detectCount].x, y);
+				const left = dt.fft[dt.bin.detectId0 + 1];
+				const right = dt.fft[dt.bin.detectId0 + dt.bin.detectCount - 1];
+				arrow.isDraw = (left != undefined) && (right != undefined);
+				arrow.start = arrow.isDraw ? s.createVector(left.x, y) : 0;
+				arrow.end = arrow.isDraw ? s.createVector(right.x, y) : 0;
 				return arrow;
-				// この数値「使って矢印を描画するところから再開する
 			})();
 			return dt;
 		}
 		dt = getDt(dt);
 		s.background(255);
 		u.drawFrame(s, size);
-		u.debug(s, p, dt, 2);
+		u.debug(s, p, p, 2);
 		p.frameRate = s.isLooping() ? s.frameRate() : 0;
 		
 		function playSnd() {
@@ -150,7 +166,7 @@ const sketch = (s) => {
 		
 		function drawDt() {
 			s.noStroke();
-			dt.fft.forEach((fft, i) => { // ここから再開 dt.detectLevelの使い方をかえる
+			dt.fft.forEach((fft, i) => {
 				if (i > dt.bin.detectId0 && i < (dt.bin.detectId0 + dt.bin.detectCount)) {
 					s.fill(255, 0, 0, s.map(dt.detectLevel, 0, 100, 255, 0));
 				} else {
@@ -163,10 +179,14 @@ const sketch = (s) => {
 				s.fill(0);
 				s.textSize(size * 0.03);
 				s.translate(scale.pos.x, scale.pos.y);
-				// s.rotate(s.HALF_PI);
 				s.text(scale.value, 0, 0, 10);
 				s.pop();
 			});
+			if (dt.arrow.isDraw) {
+				s.stroke(0);
+				s.strokeWeight(size * 0.01);
+				s.line(dt.arrow.start.x, dt.arrow.start.y, dt.arrow.end.x, dt.arrow.end.y);
+			}
 		}
 		drawDt();
 		

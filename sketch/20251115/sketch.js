@@ -17,10 +17,11 @@ const sketch = (s) => {
 		snd.amp = new p5.Amplitude();
 		snd.amp.setInput(snd.rain);
 		snd.fft = new p5.FFT();
-		snd.onset = new p5.OnsetDetect(p.detectMinFreq, p.detectMaxFreq, p.detectThresh, () => {
-			p.isDetect = true;
-			console.log('detected');
-		});
+		snd.fft.setInput(snd.rain);
+		snd.onset = new p5.OnsetDetect(p.detectMinFreq, p.detectMinFreq + p.detectFreqRange, p.detectThresh, () => {
+				p.isDetect = true;
+				console.log('detected');
+			});
 		// snd.onset.setInput(snd.rain);
 		const f = u.createPane(s, p, () => {
 			// (activate) snd.osc.start());
@@ -52,20 +53,26 @@ const sketch = (s) => {
 			min: 0,
 			max: 22000,
 		}).on('change', (ev) => {
-			if (ev.value < p.detectMaxFreq) snd.onset.freqLow = ev.value;
+			snd.onset.freqLow = ev.value;
+			const detectMaxFreq = ev.value + p.detectFreqRange;
 			if (ev.value < p.minFreq) {
 				p.minFreq = ev.value - 1;
 				f.refresh();
 			}
+			if (detectMaxFreq > p.maxFreq) {
+				p.maxFreq = detectMaxFreq + 1;
+				f.refresh();
+			}
 			p.isMoved = true;
 		});
-		f2.addBinding(p, 'detectMaxFreq', {
-			min: 0,
-			max: 22000,
+		f2.addBinding(p, 'detectFreqRange', {
+			min: 10,
+			max: 5000,
 		}).on('change', (ev) => {
-			if (ev.value > p.detectMinFreq) snd.onset.freqHigh = ev.value;
-			if (ev.value > p.maxFreq) {
-				p.maxFreq = ev.value + 1;
+			const detectMaxFreq = p.detectMinFreq + ev.value;
+			snd.onset.freqHigh = detectMaxFreq;
+			if (detectMaxFreq > p.maxFreq) {
+				p.maxFreq = detectMaxFreq + 1;
 				f.refresh();
 			}
 			p.isMoved = true;
@@ -81,16 +88,20 @@ const sketch = (s) => {
 	};
 	s.draw = () => {
 		function updateSnd() {
+			const nyquist = s.sampleRate() / 2;
+			let low = snd.onset.freqLow;
+			let high = snd.onset.freqHigh;
+			if (low >= high) return;
 			snd.onset.update(snd.fft);
 		}
 		updateSnd();
-		
+
 		function getDt(_dt) {
 			let dt = { ..._dt };
 			dt.dsp = (() => {
 				let dsp = {};
 				dsp.fftSize = p.isInit ? p.bins * 2 : _dt.dsp.fftSize;
-				dsp.resolusion = p.isInit ? s.sampleRate() / dsp.fftSize : _dt.dsp.resolution;
+				dsp.resolusion = p.isInit ? s.sampleRate() / dsp.fftSize : _dt.dsp.resolusion;
 				dsp.spec = snd.fft.analyze();
 				dsp.block = p.isInit ? s.sampleRate() / dsp.fftSize : _dt.dsp.block;
 				dsp.scale = p.isInit ? dsp.spec.map((_, i) => i * dsp.block) : _dt.dsp.scale;
@@ -105,7 +116,7 @@ const sketch = (s) => {
 				bin.count = bin.max - bin.min;
 				// calc peak detection range
 				const detectMin = s.floor(p.detectMinFreq / dt.dsp.block);
-				const detectMax = s.floor(p.detectMaxFreq / dt.dsp.block);
+				const detectMax = s.floor((p.detectMinFreq + p.detectFreqRange) / dt.dsp.block);
 				const detectDiff = detectMax - detectMin;
 				bin.detectCount = detectDiff > 0 ? detectDiff : 0;
 				bin.detectId0 = detectMin - bin.min;
@@ -132,8 +143,8 @@ const sketch = (s) => {
 				let scale = {};
 				const displayScale = dt.dsp.scale.filter((_, i) => i >= dt.bin.min && i < dt.bin.max);
 				scale.binIndex = s.floor(dt.bin.count / p.labels) * i;
-				const freq = s.floor(displayScale[scale.binIndex])/1000;
-				const order = Math.floor(Math.log10(freq));
+				const freq = s.floor(displayScale[scale.binIndex]) / 1000;
+				const order = freq > 0 ? Math.floor(Math.log10(freq)) : 0;
 				const factor = Math.pow(10, order);
 				scale.value = freq === 0 ? 0 : Math.floor(freq / factor) * factor;
 				const x = size / p.labels * i;
@@ -158,12 +169,12 @@ const sketch = (s) => {
 		u.drawFrame(s, size);
 		u.debug(s, p, p, 2);
 		p.frameRate = s.isLooping() ? s.frameRate() : 0;
-		
+
 		function playSnd() {
 			// snd.onset.update(snd.fft);
 		}
 		playSnd();
-		
+
 		function drawDt() {
 			s.noStroke();
 			dt.fft.forEach((fft, i) => {
@@ -183,13 +194,13 @@ const sketch = (s) => {
 				s.pop();
 			});
 			if (dt.arrow.isDraw) {
-				s.stroke(0);
+				s.stroke(255, 0, 0, s.map(dt.detectLevel, 0, 100, 255, 0));
 				s.strokeWeight(size * 0.01);
 				s.line(dt.arrow.start.x, dt.arrow.start.y, dt.arrow.end.x, dt.arrow.end.y);
 			}
 		}
 		drawDt();
-		
+
 		// itit params
 		p.isMoved = false;
 		p.isDetect = false;

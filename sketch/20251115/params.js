@@ -16,6 +16,7 @@ export const getParams = () => {
 		detectMinFreq: 500,
 		detectFreqRange: 1000,
 		detectThresh: 0.005,
+		peakThresh: 0.1,
 		isMoved: false, // slider trigger
 		isDetect: false,
 	};

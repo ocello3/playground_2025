@@ -20,8 +20,9 @@ const sketch = (s) => {
 		snd.fft.setInput(snd.rain);
 		snd.onset = new p5.OnsetDetect(p.detectMinFreq, p.detectMinFreq + p.detectFreqRange, p.detectThresh, () => {
 				p.isDetect = true;
-				console.log('detected');
+				console.log(`onset: true, peak: ${snd.peak.isDetected}`);
 			});
+		snd.peak = new p5.PeakDetect(p.detectMinFreq, p.detectMinFreq + p.detectFreqRange, p.peakThresh);
 		// snd.onset.setInput(snd.rain);
 		const f = u.createPane(s, p, () => {
 			// (activate) snd.osc.start());
@@ -84,6 +85,13 @@ const sketch = (s) => {
 			snd.onset.threshold = ev.value;
 			p.isMoved = true;
 		});
+		f2.addBinding(p, 'peakThresh', {
+			min: 0.001,
+			max: 1,
+		}).on('change', (ev) => { // need to check
+			snd.peak.threshold = ev.value;
+			p.isMoved = true;
+		});
 		s.textSize(p.fontSizeRate * size);
 	};
 	s.draw = () => {
@@ -93,6 +101,7 @@ const sketch = (s) => {
 			let high = snd.onset.freqHigh;
 			if (low >= high) return;
 			snd.onset.update(snd.fft);
+			snd.peak.update(snd.fft);
 		}
 		updateSnd();
 
@@ -134,7 +143,7 @@ const sketch = (s) => {
 				});
 			dt.detectLevel = (() => {
 				if (p.isInit) return 0;
-				if (p.isDetect) return 100;
+				if (p.isDetect && snd.peak.isDetected) return 100;
 				const newLevel = _dt.detectLevel - 3;
 				if (newLevel < 0) return 0;
 				return newLevel;
